@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.webthree.batchtransfer.mapper.BatchTransferTaskMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BatchTransferTaskResultMap" type="com.webthree.batchtransfer.entity.BatchTransferTask">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="task_name" property="taskName" jdbcType="VARCHAR"/>
+        <result column="total_recipients" property="totalRecipients" jdbcType="INTEGER"/>
+        <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
+        <result column="status" property="status" jdbcType="VARCHAR" 
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result column="tx_hash" property="txHash" jdbcType="VARCHAR"/>
+        <result column="error_message" property="errorMessage" jdbcType="LONGVARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础字段 -->
+    <sql id="Base_Column_List">
+        id, task_name, total_recipients, total_amount, status, 
+        tx_hash, error_message, created_at, updated_at
+    </sql>
+
+    <!-- 插入新任务 -->
+    <insert id="insert" parameterType="com.webthree.batchtransfer.entity.BatchTransferTask" 
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO batch_transfer_tasks (
+            task_name, total_recipients, total_amount, status, 
+            tx_hash, error_message, created_at, updated_at
+        ) VALUES (
+            #{taskName}, #{totalRecipients}, #{totalAmount}, #{status}, 
+            #{txHash}, #{errorMessage}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 根据ID查询任务 -->
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_tasks
+        WHERE id = #{id}
+    </select>
+
+    <!-- 查询所有任务列表 -->
+    <select id="selectAll" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_tasks
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据状态查询任务列表 -->
+    <select id="selectByStatus" parameterType="java.lang.String" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_tasks
+        WHERE status = #{status}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 更新任务状态 -->
+    <update id="updateStatus">
+        UPDATE batch_transfer_tasks
+        SET 
+            status = #{status},
+            updated_at = NOW()
+            <if test="txHash != null and txHash != ''">
+                , tx_hash = #{txHash}
+            </if>
+            <if test="errorMessage != null and errorMessage != ''">
+                , error_message = #{errorMessage}
+            </if>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除任务 -->
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM batch_transfer_tasks
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

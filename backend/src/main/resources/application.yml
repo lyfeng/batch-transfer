@@ -1,0 +1,147 @@
+spring:
+  application:
+    name: batch-transfer-backend
+  profiles:
+    active: dev
+  
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/batch_transfer?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: batch_transfer
+    password: batch_transfer_pwd
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  # MyBatis配置
+  mybatis:
+    mapper-locations: classpath:mybatis/*.xml
+    type-aliases-package: com.webthree.batchtransfer.entity
+    configuration:
+      map-underscore-to-camel-case: true
+      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non-null
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# 应用自定义配置
+app:
+  # 区块链配置
+  blockchain:
+    # 以太坊RPC节点URL（请替换为实际的RPC地址）
+    rpc-url: https://mainnet.infura.io/v3/YOUR_PROJECT_ID
+    # 连接超时时间（毫秒）
+    connection-timeout: 30000
+    # 读取超时时间（毫秒）
+    read-timeout: 60000
+    # 智能合约地址（需要部署后配置）
+    contract-address: 0x0000000000000000000000000000000000000000
+  
+  # CORS配置
+  cors:
+    allowed-origins: 
+      - http://localhost:3000
+      - http://localhost:5173
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+
+# 日志配置
+logging:
+  level:
+    com.webthree.batchtransfer: INFO
+    org.springframework.web: DEBUG
+    org.mybatis: DEBUG
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+  file:
+    name: logs/batch-transfer.log
+    max-size: 100MB
+    max-history: 30
+
+# 管理端点配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Swagger文档配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  packages-to-scan: com.webthree.batchtransfer.controller
+
+---
+# 开发环境配置
+spring:
+  config:
+    activate:
+      on-profile: dev
+  
+  datasource:
+    url: jdbc:mysql://localhost:3306/batch_transfer_dev?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+
+app:
+  blockchain:
+    rpc-url: https://sepolia.infura.io/v3/YOUR_PROJECT_ID
+
+logging:
+  level:
+    root: INFO
+    com.webthree.batchtransfer: DEBUG
+
+---
+# 生产环境配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:batch_transfer}?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:batch_transfer}
+    password: ${DB_PASSWORD:batch_transfer_pwd}
+
+app:
+  blockchain:
+    rpc-url: ${BLOCKCHAIN_RPC_URL:https://mainnet.infura.io/v3/YOUR_PROJECT_ID}
+    contract-address: ${CONTRACT_ADDRESS:0x0000000000000000000000000000000000000000}
+
+logging:
+  level:
+    root: WARN
+    com.webthree.batchtransfer: INFO
+  file:
+    name: /var/log/batch-transfer/application.log
