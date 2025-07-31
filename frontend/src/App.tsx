@@ -9,7 +9,7 @@ import TaskList from './pages/TaskList'
 import TaskDetail from './pages/TaskDetail'
 import CreateTask from './pages/CreateTask'
 import Dashboard from './pages/Dashboard'
-import Settings from './pages/Settings'
+
 import { useAppStore } from './store/useAppStore'
 
 const { Content } = Layout
@@ -24,23 +24,28 @@ const App: React.FC = () => {
         <meta name="description" content="安全、高效的以太坊批量转账解决方案" />
       </Helmet>
       
-      <Layout className="min-h-screen">
+      <Layout style={{ minHeight: '100vh' }}>
         <Sidebar collapsed={sidebarCollapsed} />
         
-        <Layout className={`transition-all duration-300 ${
-          sidebarCollapsed ? 'ml-20' : 'ml-64'
-        }`}>
+        <Layout style={{ 
+          marginLeft: sidebarCollapsed ? '80px' : '256px',
+          transition: 'margin-left 0.3s'
+        }}>
           <Header />
           
-          <Content className="p-6 bg-gray-50">
-            <div className="max-w-7xl mx-auto">
+          <Content style={{ 
+            minHeight: 'calc(100vh - 64px)', 
+            background: '#f5f5f5',
+            padding: '20px'
+          }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/tasks" element={<TaskList />} />
                 <Route path="/tasks/create" element={<CreateTask />} />
                 <Route path="/tasks/:id" element={<TaskDetail />} />
-                <Route path="/settings" element={<Settings />} />
+
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </div>

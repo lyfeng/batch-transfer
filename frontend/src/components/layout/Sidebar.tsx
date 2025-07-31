@@ -5,7 +5,6 @@ import {
   DashboardOutlined,
   UnorderedListOutlined,
   PlusOutlined,
-  SettingOutlined,
   SendOutlined,
 } from '@ant-design/icons'
 
@@ -36,11 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       icon: <PlusOutlined />,
       label: '创建任务',
     },
-    {
-      key: '/settings',
-      icon: <SettingOutlined />,
-      label: '设置',
-    },
   ]
 
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -52,22 +46,36 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       trigger={null}
       collapsible
       collapsed={collapsed}
-      className="fixed left-0 top-0 bottom-0 h-screen z-10"
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        height: '100vh',
+        zIndex: 20,
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
+      }}
       theme="light"
       width={256}
       collapsedWidth={80}
     >
       {/* Logo区域 */}
-      <div className="h-16 flex items-center justify-center border-b border-gray-200">
+      <div style={{ 
+        height: '64px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        borderBottom: '1px solid #f0f0f0' 
+      }}>
         {!collapsed ? (
-          <div className="flex items-center space-x-2">
-            <SendOutlined className="text-2xl text-blue-500" />
-            <Text className="text-lg font-bold text-gray-800">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <SendOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
+            <Text style={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>
               批量转账
             </Text>
           </div>
         ) : (
-          <SendOutlined className="text-2xl text-blue-500" />
+          <SendOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
         )}
       </div>
 
@@ -77,8 +85,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={handleMenuClick}
-        className="border-none"
-        style={{ height: 'calc(100% - 64px)' }}
+        style={{ 
+          height: 'calc(100% - 64px)',
+          border: 'none'
+        }}
       />
     </Sider>
   )

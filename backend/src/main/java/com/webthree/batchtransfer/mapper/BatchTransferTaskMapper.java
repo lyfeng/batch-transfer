@@ -45,6 +45,24 @@ public interface BatchTransferTaskMapper {
     List<BatchTransferTask> selectByStatus(@Param("status") BatchTransferTask.TaskStatus status);
     
     /**
+     * 根据创建者地址查询任务列表
+     * 
+     * @param creatorAddress 创建者地址
+     * @return 任务列表
+     */
+    List<BatchTransferTask> selectByCreatorAddress(@Param("creatorAddress") String creatorAddress);
+    
+    /**
+     * 根据创建者地址和状态查询任务列表
+     * 
+     * @param creatorAddress 创建者地址
+     * @param status 任务状态
+     * @return 任务列表
+     */
+    List<BatchTransferTask> selectByCreatorAddressAndStatus(@Param("creatorAddress") String creatorAddress, 
+                                                           @Param("status") BatchTransferTask.TaskStatus status);
+    
+    /**
      * 更新任务状态
      * 
      * @param id 任务ID

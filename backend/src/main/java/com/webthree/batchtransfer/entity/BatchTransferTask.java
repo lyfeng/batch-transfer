@@ -33,6 +33,11 @@ public class BatchTransferTask {
     private String taskName;
     
     /**
+     * 创建者钱包地址
+     */
+    private String creatorAddress;
+    
+    /**
      * 总接收地址数量
      */
     private Integer totalRecipients;

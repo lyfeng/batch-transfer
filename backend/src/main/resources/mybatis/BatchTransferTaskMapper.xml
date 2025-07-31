@@ -6,7 +6,8 @@
     <resultMap id="BatchTransferTaskResultMap" type="com.webthree.batchtransfer.entity.BatchTransferTask">
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="task_name" property="taskName" jdbcType="VARCHAR"/>
-        <result column="total_recipients" property="totalRecipients" jdbcType="INTEGER"/>
+        <result column="creator_address" property="creatorAddress" jdbcType="VARCHAR"/>
+        <result column="recipient_count" property="totalRecipients" jdbcType="INTEGER"/>
         <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
         <result column="status" property="status" jdbcType="VARCHAR" 
                 typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
@@ -18,18 +19,18 @@
 
     <!-- 基础字段 -->
     <sql id="Base_Column_List">
-        id, task_name, total_recipients, total_amount, status, 
+        id, task_name, creator_address, recipient_count, total_amount, status, 
         tx_hash, error_message, created_at, updated_at
     </sql>
 
     <!-- 插入新任务 -->
     <insert id="insert" parameterType="com.webthree.batchtransfer.entity.BatchTransferTask" 
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO batch_transfer_tasks (
-            task_name, total_recipients, total_amount, status, 
+        INSERT INTO batch_transfer_task (
+            task_name, creator_address, recipient_count, total_amount, status, 
             tx_hash, error_message, created_at, updated_at
         ) VALUES (
-            #{taskName}, #{totalRecipients}, #{totalAmount}, #{status}, 
+            #{taskName}, #{creatorAddress}, #{totalRecipients}, #{totalAmount}, #{status}, 
             #{txHash}, #{errorMessage}, NOW(), NOW()
         )
     </insert>
@@ -38,7 +39,7 @@
     <select id="selectById" parameterType="java.lang.Long" resultMap="BatchTransferTaskResultMap">
         SELECT 
         <include refid="Base_Column_List"/>
-        FROM batch_transfer_tasks
+        FROM batch_transfer_task
         WHERE id = #{id}
     </select>
 
@@ -46,22 +47,41 @@
     <select id="selectAll" resultMap="BatchTransferTaskResultMap">
         SELECT 
         <include refid="Base_Column_List"/>
-        FROM batch_transfer_tasks
+        FROM batch_transfer_task
         ORDER BY created_at DESC
     </select>
 
     <!-- 根据状态查询任务列表 -->
-    <select id="selectByStatus" parameterType="java.lang.String" resultMap="BatchTransferTaskResultMap">
+    <select id="selectByStatus" resultMap="BatchTransferTaskResultMap">
         SELECT 
         <include refid="Base_Column_List"/>
-        FROM batch_transfer_tasks
-        WHERE status = #{status}
+        FROM batch_transfer_task
+        WHERE status = #{status,jdbcType=VARCHAR}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据创建者地址查询任务列表 -->
+    <select id="selectByCreatorAddress" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_task
+        WHERE creator_address = #{creatorAddress}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据创建者地址和状态查询任务列表 -->
+    <select id="selectByCreatorAddressAndStatus" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_task
+        WHERE creator_address = #{creatorAddress}
+        AND status = #{status,jdbcType=VARCHAR}
         ORDER BY created_at DESC
     </select>
 
     <!-- 更新任务状态 -->
     <update id="updateStatus">
-        UPDATE batch_transfer_tasks
+        UPDATE batch_transfer_task
         SET 
             status = #{status},
             updated_at = NOW()
@@ -76,7 +96,7 @@
 
     <!-- 根据ID删除任务 -->
     <delete id="deleteById" parameterType="java.lang.Long">
-        DELETE FROM batch_transfer_tasks
+        DELETE FROM batch_transfer_task
         WHERE id = #{id}
     </delete>
 

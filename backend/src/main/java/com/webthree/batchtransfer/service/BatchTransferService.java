@@ -34,14 +34,28 @@ public class BatchTransferService {
     private final BatchTransferItemMapper itemMapper;
     
     /**
-     * 创建批量转账任务
+     * 创建批量转账任务（兼容老版本）
      * 
      * @param request 创建请求
      * @return 任务响应
+     * @deprecated 使用 createTask(CreateTaskRequest, String) 替代
      */
+    @Deprecated
     @Transactional(rollbackFor = Exception.class)
     public TaskResponse createTask(CreateTaskRequest request) {
-        log.info("创建批量转账任务: {}", request.getTaskName());
+        return createTask(request, request.getCreatorAddress());
+    }
+    
+    /**
+     * 创建批量转账任务
+     * 
+     * @param request 创建请求
+     * @param creatorAddress 创建者钱包地址
+     * @return 任务响应
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public TaskResponse createTask(CreateTaskRequest request, String creatorAddress) {
+        log.info("创建批量转账任务: {}, 创建者: {}", request.getTaskName(), creatorAddress);
         
         // 验证转账项
         validateTransferItems(request.getTransferItems());
@@ -54,6 +68,7 @@ public class BatchTransferService {
         // 创建任务实体
         BatchTransferTask task = BatchTransferTask.builder()
                 .taskName(request.getTaskName())
+                .creatorAddress(creatorAddress.toLowerCase()) // 统一转为小写
                 .totalRecipients(request.getTransferItems().size())
                 .totalAmount(totalAmount)
                 .status(BatchTransferTask.TaskStatus.PENDING)
@@ -84,8 +99,8 @@ public class BatchTransferService {
             throw new RuntimeException("创建转账项失败");
         }
         
-        log.info("成功创建批量转账任务: ID={}, 名称={}, 转账项数量={}", 
-                task.getId(), task.getTaskName(), items.size());
+        log.info("成功创建批量转账任务: ID={}, 名称={}, 创建者={}, 转账项数量={}", 
+                task.getId(), task.getTaskName(), creatorAddress, items.size());
         
         return convertToTaskResponse(task);
     }
@@ -134,6 +149,33 @@ public class BatchTransferService {
      */
     public List<TaskResponse> getTasksByStatus(BatchTransferTask.TaskStatus status) {
         List<BatchTransferTask> tasks = taskMapper.selectByStatus(status);
+        return tasks.stream()
+                .map(this::convertToTaskResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 根据创建者地址获取任务列表
+     * 
+     * @param creatorAddress 创建者地址
+     * @return 任务列表
+     */
+    public List<TaskResponse> getTasksByCreatorAddress(String creatorAddress) {
+        List<BatchTransferTask> tasks = taskMapper.selectByCreatorAddress(creatorAddress);
+        return tasks.stream()
+                .map(this::convertToTaskResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 根据创建者地址和状态获取任务列表
+     * 
+     * @param creatorAddress 创建者地址
+     * @param status 任务状态
+     * @return 任务列表
+     */
+    public List<TaskResponse> getTasksByCreatorAddressAndStatus(String creatorAddress, BatchTransferTask.TaskStatus status) {
+        List<BatchTransferTask> tasks = taskMapper.selectByCreatorAddressAndStatus(creatorAddress, status);
         return tasks.stream()
                 .map(this::convertToTaskResponse)
                 .collect(Collectors.toList());
@@ -228,6 +270,7 @@ public class BatchTransferService {
         return TaskResponse.builder()
                 .id(task.getId())
                 .taskName(task.getTaskName())
+                .creatorAddress(task.getCreatorAddress())
                 .totalRecipients(task.getTotalRecipients())
                 .totalAmount(task.getTotalAmount())
                 .status(task.getStatus())

@@ -30,6 +30,12 @@ public class CreateTaskRequest {
     private String taskName;
     
     /**
+     * 创建者钱包地址
+     */
+    @NotBlank(message = "创建者地址不能为空")
+    private String creatorAddress;
+    
+    /**
      * 转账项列表
      */
     @NotEmpty(message = "转账项列表不能为空")

@@ -1,69 +1,36 @@
 import React, { ReactNode } from 'react'
-import { WagmiConfig, createConfig, configureChains, mainnet, sepolia } from 'wagmi'
-import { publicProvider } from 'wagmi/providers/public'
-import { alchemyProvider } from 'wagmi/providers/alchemy'
-import { infuraProvider } from 'wagmi/providers/infura'
-import { MetaMaskConnector } from 'wagmi/connectors/metaMask'
-import { WalletConnectConnector } from 'wagmi/connectors/walletConnect'
-import { InjectedConnector } from 'wagmi/connectors/injected'
-import { RainbowKitProvider, getDefaultWallets, connectorsForWallets } from '@rainbow-me/rainbowkit'
+import { WagmiProvider as WagmiProviderBase, createConfig, http } from 'wagmi'
+import { mainnet, sepolia } from 'wagmi/chains'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
 import '@rainbow-me/rainbowkit/styles.css'
 
 interface WagmiProviderProps {
   children: ReactNode
 }
 
+// 创建 React Query 客户端
+const queryClient = new QueryClient()
+
 // 配置支持的链
-const { chains, publicClient, webSocketPublicClient } = configureChains(
-  [
-    mainnet,
-    sepolia, // 测试网
-  ],
-  [
-    // 优先使用Alchemy（如果有API key）
-    alchemyProvider({ 
-      apiKey: import.meta.env.VITE_ALCHEMY_API_KEY || 'demo' 
-    }),
-    // 备用Infura
-    infuraProvider({ 
-      apiKey: import.meta.env.VITE_INFURA_API_KEY || 'demo' 
-    }),
-    // 公共提供商作为最后备选
-    publicProvider(),
-  ]
-)
+const chains = [mainnet, sepolia] as const
 
-// 配置钱包连接器
-const { wallets } = getDefaultWallets({
+// 使用 RainbowKit 的 getDefaultConfig 来配置 Wagmi
+const wagmiConfig = getDefaultConfig({
   appName: 'ETH批量转账系统',
-  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'demo',
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
   chains,
-})
-
-const connectors = connectorsForWallets([
-  ...wallets,
-  {
-    groupName: '其他',
-    wallets: [
-      {
-        id: 'injected',
-        name: '注入式钱包',
-        iconUrl: 'https://avatars.githubusercontent.com/u/37784886',
-        iconBackground: '#fff',
-        createConnector: () => ({
-          connector: new InjectedConnector({ chains }),
-        }),
-      },
-    ],
+  transports: {
+    [mainnet.id]: http(
+      import.meta.env.VITE_MAINNET_RPC_URL || 
+      `https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`
+    ),
+    [sepolia.id]: http(
+      import.meta.env.VITE_SEPOLIA_RPC_URL || 
+      `https://eth-sepolia.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`
+    ),
   },
-])
-
-// 创建Wagmi配置
-const wagmiConfig = createConfig({
-  autoConnect: true,
-  connectors,
-  publicClient,
-  webSocketPublicClient,
+  ssr: false,
 })
 
 // RainbowKit主题配置
@@ -125,16 +92,17 @@ const rainbowKitTheme = {
 
 export const WagmiProvider: React.FC<WagmiProviderProps> = ({ children }) => {
   return (
-    <WagmiConfig config={wagmiConfig}>
-      <RainbowKitProvider 
-        chains={chains} 
-        theme={rainbowKitTheme}
-        modalSize="compact"
-        coolMode
-      >
-        {children}
-      </RainbowKitProvider>
-    </WagmiConfig>
+    <WagmiProviderBase config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider 
+          theme={rainbowKitTheme}
+          modalSize="compact"
+          coolMode
+        >
+          {children}
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProviderBase>
   )
 }
 

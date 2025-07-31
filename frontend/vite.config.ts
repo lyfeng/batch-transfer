@@ -150,8 +150,10 @@ export default defineConfig(({ command, mode }) => {
         'axios',
         'dayjs',
         'lodash-es',
+        'eventemitter3',
       ],
       exclude: ['@wagmi/core'],
+      force: true,
     },
 
     // CSS配置

@@ -7,6 +7,7 @@ import com.webthree.batchtransfer.dto.UpdateTaskStatusRequest;
 import com.webthree.batchtransfer.entity.BatchTransferTask;
 import com.webthree.batchtransfer.service.BatchTransferService;
 import com.webthree.batchtransfer.service.BlockchainMonitorService;
+import com.webthree.batchtransfer.util.AuthUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,7 +18,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,8 +54,11 @@ public class BatchTransferController {
         log.info("Creating batch transfer task: {}", request.getTaskName());
         
         try {
-            TaskResponse task = batchTransferService.createTask(request);
-            log.info("Successfully created task with ID: {}", task.getId());
+            // 从认证信息中获取当前用户的钱包地址
+            String currentWalletAddress = AuthUtils.requireCurrentWalletAddress();
+            
+            TaskResponse task = batchTransferService.createTask(request, currentWalletAddress);
+            log.info("Successfully created task with ID: {} for wallet: {}", task.getId(), currentWalletAddress);
             
             return ResponseEntity.ok(ApiResponse.success(task));
         } catch (Exception e) {
@@ -93,27 +96,29 @@ public class BatchTransferController {
     /**
      * 获取任务列表
      * 
-     * @param page 页码（从0开始）
-     * @param size 每页大小
      * @param status 任务状态过滤
-     * @param sortBy 排序字段
-     * @param sortDir 排序方向
      * @return 任务列表
      */
     @GetMapping("/tasks")
-    @Operation(summary = "获取任务列表", description = "获取批量转账任务列表")
+    @Operation(summary = "获取任务列表", description = "获取当前用户的批量转账任务列表")
     public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasks(
             @Parameter(description = "任务状态过滤") 
             @RequestParam(required = false) BatchTransferTask.TaskStatus status) {
         
-        log.info("Getting tasks list with status: {}", status);
-        
         try {
+            // 从认证信息中获取当前用户的钱包地址
+            String currentWalletAddress = AuthUtils.requireCurrentWalletAddress();
+            
+            log.info("Getting tasks list for wallet: {}, status: {}", currentWalletAddress, status);
+            
             List<TaskResponse> tasks;
+            
             if (status != null) {
-                tasks = batchTransferService.getTasksByStatus(status);
+                // 按当前用户地址和状态过滤
+                tasks = batchTransferService.getTasksByCreatorAddressAndStatus(currentWalletAddress, status);
             } else {
-                tasks = batchTransferService.getAllTasks();
+                // 获取当前用户的所有任务
+                tasks = batchTransferService.getTasksByCreatorAddress(currentWalletAddress);
             }
             
             return ResponseEntity.ok(ApiResponse.success(tasks));
@@ -181,20 +186,23 @@ public class BatchTransferController {
      * @return 统计信息
      */
     @GetMapping("/tasks/statistics")
-    @Operation(summary = "获取任务统计", description = "获取批量转账任务的统计信息")
+    @Operation(summary = "获取任务统计", description = "获取当前用户的批量转账任务统计信息")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTaskStatistics() {
         
-        log.info("Getting task statistics");
-        
         try {
-            // 简单的统计信息
-            List<TaskResponse> allTasks = batchTransferService.getAllTasks();
+            // 从认证信息中获取当前用户的钱包地址
+            String currentWalletAddress = AuthUtils.requireCurrentWalletAddress();
+            
+            log.info("Getting task statistics for wallet: {}", currentWalletAddress);
+            
+            // 获取当前用户的任务列表
+            List<TaskResponse> userTasks = batchTransferService.getTasksByCreatorAddress(currentWalletAddress);
             Map<String, Object> statistics = new HashMap<>();
-            statistics.put("totalTasks", allTasks.size());
-            statistics.put("pendingTasks", allTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.PENDING).count());
-            statistics.put("executingTasks", allTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.EXECUTING).count());
-            statistics.put("completedTasks", allTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.COMPLETED).count());
-            statistics.put("failedTasks", allTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.FAILED).count());
+            statistics.put("totalTasks", userTasks.size());
+            statistics.put("pendingTasks", userTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.PENDING).count());
+            statistics.put("executingTasks", userTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.EXECUTING).count());
+            statistics.put("completedTasks", userTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.COMPLETED).count());
+            statistics.put("failedTasks", userTasks.stream().filter(t -> t.getStatus() == BatchTransferTask.TaskStatus.FAILED).count());
             
             return ResponseEntity.ok(ApiResponse.success(statistics));
         } catch (Exception e) {

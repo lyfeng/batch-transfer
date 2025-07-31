@@ -70,7 +70,7 @@ export const useBatchTransfer = (chainId?: number) => {
       onSuccess: () => {
         toast.success('批量转账成功！')
       },
-      onError: (error) => {
+      onError: (error: any) => {
         toast.error(`转账失败: ${error.message}`)
       },
     })
@@ -100,7 +100,7 @@ export const useBatchTransfer = (chainId?: number) => {
       onSuccess: () => {
         toast.success('紧急提取成功！')
       },
-      onError: (error) => {
+      onError: (error: any) => {
         toast.error(`提取失败: ${error.message}`)
       },
     })
@@ -111,6 +111,23 @@ export const useBatchTransfer = (chainId?: number) => {
       error,
       isLoading: isWriteLoading || isTransactionLoading,
       isSuccess,
+    }
+  }
+
+  // 执行批量转账任务
+  const executeBatchTransfer = async (task: TaskItem) => {
+    try {
+      const transferItems = [task] // 单个任务转换为数组
+      const { write } = useBatchTransferWrite(transferItems)
+      
+      if (write) {
+        write()
+        return true
+      }
+      return false
+    } catch (error: any) {
+      toast.error(`执行转账失败: ${error.message}`)
+      return false
     }
   }
 
@@ -152,6 +169,37 @@ export const useBatchTransfer = (chainId?: number) => {
     return errors
   }
 
+  const validateTransferParams = (recipients: string[], amounts: string[]) => {
+    if (recipients.length !== amounts.length) {
+      throw new Error('收款人数量与金额数量不匹配')
+    }
+
+    if (recipients.length === 0) {
+      throw new Error('至少需要一个收款人')
+    }
+
+    if (maxRecipients && recipients.length > Number(maxRecipients)) {
+      throw new Error(`收款人数量不能超过 ${maxRecipients}`)
+    }
+
+    // 验证地址格式
+    recipients.forEach((address, index) => {
+      if (!address || address.length !== 42 || !address.startsWith('0x')) {
+        throw new Error(`第 ${index + 1} 个地址格式不正确`)
+      }
+    })
+
+    // 验证金额
+    amounts.forEach((amount, index) => {
+      const num = parseFloat(amount)
+      if (isNaN(num) || num <= 0) {
+        throw new Error(`第 ${index + 1} 个金额无效`)
+      }
+    })
+
+    return true
+  }
+
   return {
     // 合约信息
     contractAddress,
@@ -165,9 +213,13 @@ export const useBatchTransfer = (chainId?: number) => {
     // 写入函数
     useBatchTransferWrite,
     useEmergencyWithdraw,
+    executeBatchTransfer,
     
     // 工具函数
     calculateTotalAmount,
     validateTransferItems,
+    validateTransferParams,
   }
-} 
+}
+
+export default useBatchTransfer
