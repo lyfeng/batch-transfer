@@ -43,9 +43,14 @@ public class BatchTransferItem {
     private BigDecimal amount;
     
     /**
-     * 子项状态（可选，MVP阶段可依赖主任务状态）
+     * 子项状态
      */
     private ItemStatus status;
+    
+    /**
+     * 交易哈希（与任务共享）
+     */
+    private String txHash;
     
     /**
      * 创建时间

@@ -45,4 +45,28 @@ public interface BatchTransferItemMapper {
      * @return 更新记录数
      */
     int updateStatus(@Param("id") Long id, @Param("status") BatchTransferItem.ItemStatus status);
+    
+    /**
+     * 批量更新转账项状态和交易哈希
+     * 
+     * @param taskId 任务ID
+     * @param status 状态
+     * @param txHash 交易哈希
+     * @return 更新记录数
+     */
+    int batchUpdateStatusAndTxHash(@Param("taskId") Long taskId, 
+                                   @Param("status") BatchTransferItem.ItemStatus status,
+                                   @Param("txHash") String txHash);
+    
+    /**
+     * 根据任务ID和接收地址更新状态
+     * 
+     * @param taskId 任务ID
+     * @param recipientAddress 接收地址
+     * @param status 状态
+     * @return 更新记录数
+     */
+    int updateStatusByTaskAndRecipient(@Param("taskId") Long taskId,
+                                       @Param("recipientAddress") String recipientAddress,
+                                       @Param("status") BatchTransferItem.ItemStatus status);
 }

@@ -67,6 +67,16 @@ public class BatchTransferTask {
     private String errorMessage;
     
     /**
+     * 执行令牌，防止重复执行
+     */
+    private String executionToken;
+    
+    /**
+     * 执行开始时间
+     */
+    private LocalDateTime executionStartedAt;
+    
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

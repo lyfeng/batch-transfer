@@ -3,6 +3,7 @@ package com.webthree.batchtransfer.mapper;
 import com.webthree.batchtransfer.entity.BatchTransferTask;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -69,12 +70,41 @@ public interface BatchTransferTaskMapper {
      * @param status 新状态
      * @param txHash 交易哈希
      * @param errorMessage 错误信息
+     * @param executionToken 执行令牌
+     * @param executionStartedAt 执行开始时间
      * @return 更新记录数
      */
     int updateStatus(@Param("id") Long id, 
                     @Param("status") BatchTransferTask.TaskStatus status,
                     @Param("txHash") String txHash,
-                    @Param("errorMessage") String errorMessage);
+                    @Param("errorMessage") String errorMessage,
+                    @Param("executionToken") String executionToken,
+                    @Param("executionStartedAt") LocalDateTime executionStartedAt);
+    
+    /**
+     * 仅更新交易哈希
+     * 
+     * @param id 任务ID
+     * @param txHash 交易哈希
+     * @return 更新记录数
+     */
+    int updateTxHashOnly(@Param("id") Long id, @Param("txHash") String txHash);
+    
+    /**
+     * 根据执行令牌查询任务
+     * 
+     * @param executionToken 执行令牌
+     * @return 任务对象
+     */
+    BatchTransferTask selectByExecutionToken(@Param("executionToken") String executionToken);
+    
+    /**
+     * 查询超时的执行中任务
+     * 
+     * @param timeoutMinutes 超时分钟数
+     * @return 超时任务列表
+     */
+    List<BatchTransferTask> selectTimeoutExecutingTasks(@Param("timeoutMinutes") Integer timeoutMinutes);
     
     /**
      * 根据ID删除任务

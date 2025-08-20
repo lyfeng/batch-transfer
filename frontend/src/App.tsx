@@ -9,6 +9,7 @@ import TaskList from './pages/TaskList'
 import TaskDetail from './pages/TaskDetail'
 import CreateTask from './pages/CreateTask'
 import Dashboard from './pages/Dashboard'
+import WalletAuth from './components/WalletAuth'
 
 import { useAppStore } from './store/useAppStore'
 
@@ -24,34 +25,37 @@ const App: React.FC = () => {
         <meta name="description" content="安全、高效的以太坊批量转账解决方案" />
       </Helmet>
       
-      <Layout style={{ minHeight: '100vh' }}>
-        <Sidebar collapsed={sidebarCollapsed} />
-        
-        <Layout style={{ 
-          marginLeft: sidebarCollapsed ? '80px' : '256px',
-          transition: 'margin-left 0.3s'
-        }}>
-          <Header />
+      {/* 全局认证守卫 - 只检查一次 */}
+      <WalletAuth requireAuth={true}>
+        <Layout style={{ minHeight: '100vh' }}>
+          <Sidebar collapsed={sidebarCollapsed} />
           
-          <Content style={{ 
-            minHeight: 'calc(100vh - 64px)', 
-            background: '#f5f5f5',
-            padding: '20px'
+          <Layout style={{ 
+            marginLeft: sidebarCollapsed ? '80px' : '256px',
+            transition: 'margin-left 0.3s'
           }}>
-            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/tasks" element={<TaskList />} />
-                <Route path="/tasks/create" element={<CreateTask />} />
-                <Route path="/tasks/:id" element={<TaskDetail />} />
+            <Header />
+            
+            <Content style={{ 
+              minHeight: 'calc(100vh - 64px)', 
+              background: '#f5f5f5',
+              padding: '20px'
+            }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/tasks" element={<TaskList />} />
+                  <Route path="/tasks/create" element={<CreateTask />} />
+                  <Route path="/tasks/:id" element={<TaskDetail />} />
 
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </div>
-          </Content>
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+              </div>
+            </Content>
+          </Layout>
         </Layout>
-      </Layout>
+      </WalletAuth>
     </>
   )
 }

@@ -12,7 +12,7 @@ export interface ApiResponse<T = any> {
 // 任务状态枚举
 export enum TaskStatus {
   PENDING = 'PENDING',
-  EXECUTING = 'EXECUTING', 
+  EXECUTING = 'EXECUTING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
 }
@@ -51,6 +51,8 @@ export interface Task {
   blockNumber?: number
   gasUsed?: number
   errorMessage?: string
+  executionToken?: string
+  executionStartedAt?: string
   createdAt: string
   updatedAt?: string
   transferItems?: TransferItem[]
@@ -67,7 +69,7 @@ export interface CreateTaskRequest {
 
 // 更新任务状态请求
 export interface UpdateTaskStatusRequest {
-  status: TaskStatus
+  status?: TaskStatus
   txHash?: string
   blockNumber?: number
   gasUsed?: number

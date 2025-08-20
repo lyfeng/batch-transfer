@@ -19,9 +19,8 @@ import jakarta.validation.constraints.NotNull;
 public class UpdateTaskStatusRequest {
     
     /**
-     * 任务状态
+     * 任务状态（可选）
      */
-    @NotNull(message = "任务状态不能为空")
     private BatchTransferTask.TaskStatus status;
     
     /**

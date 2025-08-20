@@ -80,15 +80,17 @@ const WalletAuth: React.FC<WalletAuthProps> = ({
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center', 
-      minHeight: '60vh',
+      minHeight: '70vh',
       padding: '20px' 
     }}>
       <Card 
         style={{ 
-          maxWidth: '520px', 
+          maxWidth: '480px', 
           width: '100%',
           textAlign: 'center',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+          borderRadius: '12px',
+          border: '1px solid #f0f0f0'
         }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -128,10 +130,22 @@ const WalletAuth: React.FC<WalletAuthProps> = ({
           )}
 
           {/* 操作按钮 */}
-          <div style={{ marginTop: '24px' }}>
+          <div style={{ 
+            marginTop: '32px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
             {!isConnected ? (
               // 钱包未连接时显示连接按钮
-              <ConnectButton />
+              <div style={{
+                padding: '8px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+              }}>
+                <ConnectButton />
+              </div>
             ) : (
               // 钱包已连接但未认证时显示登录按钮
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>

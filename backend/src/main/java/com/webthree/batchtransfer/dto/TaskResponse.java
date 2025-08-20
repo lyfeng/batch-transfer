@@ -64,6 +64,17 @@ public class TaskResponse {
     private String errorMessage;
     
     /**
+     * 执行令牌
+     */
+    private String executionToken;
+    
+    /**
+     * 执行开始时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime executionStartedAt;
+    
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -79,4 +90,4 @@ public class TaskResponse {
      * 转账项列表（详情查询时包含）
      */
     private List<TransferItemResponse> transferItems;
-} 
+}

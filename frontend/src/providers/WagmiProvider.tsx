@@ -1,37 +1,63 @@
 import React, { ReactNode } from 'react'
-import { WagmiProvider as WagmiProviderBase, createConfig, http } from 'wagmi'
+import { WagmiProvider as WagmiProviderCore, createConfig, http } from 'wagmi'
 import { mainnet, sepolia } from 'wagmi/chains'
+import { metaMask, walletConnect, injected } from 'wagmi/connectors'
+import { RainbowKitProvider, getDefaultWallets, connectorsForWallets } from '@rainbow-me/rainbowkit'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
+import { SUPPORTED_CHAINS, RPC_URLS } from '../constants/contracts'
 import '@rainbow-me/rainbowkit/styles.css'
 
 interface WagmiProviderProps {
   children: ReactNode
 }
 
-// 创建 React Query 客户端
-const queryClient = new QueryClient()
-
-// 配置支持的链
+// 配置支持的链和传输
 const chains = [mainnet, sepolia] as const
 
-// 使用 RainbowKit 的 getDefaultConfig 来配置 Wagmi
-const wagmiConfig = getDefaultConfig({
+// 创建传输配置
+const transports = {
+  [mainnet.id]: http(RPC_URLS[SUPPORTED_CHAINS.MAINNET]),
+  [sepolia.id]: http(RPC_URLS[SUPPORTED_CHAINS.SEPOLIA]),
+}
+
+// 配置钱包连接器
+const { wallets } = getDefaultWallets({
   appName: 'ETH批量转账系统',
-  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains,
-  transports: {
-    [mainnet.id]: http(
-      import.meta.env.VITE_MAINNET_RPC_URL || 
-      `https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`
-    ),
-    [sepolia.id]: http(
-      import.meta.env.VITE_SEPOLIA_RPC_URL || 
-      `https://eth-sepolia.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY || 'demo'}`
-    ),
-  },
-  ssr: false,
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '5fa01c55db77b3c02ac157dc76f1cc42', // 请设置环境变量或替换为真实的WalletConnect Project ID
 })
+
+const connectors = connectorsForWallets(
+  [
+    ...wallets,
+    // 添加注入式连接器作为备选
+    {
+      groupName: 'Other',
+      wallets: [
+        () => ({
+          id: 'injected',
+          name: 'Injected Wallet',
+          iconUrl: 'https://avatars.githubusercontent.com/u/37784886',
+          iconBackground: '#fff',
+          createConnector: () => injected(),
+        }),
+      ],
+    },
+  ],
+  {
+    appName: 'ETH批量转账系统',
+    projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '5fa01c55db77b3c02ac157dc76f1cc42',
+  }
+)
+
+// 创建Wagmi配置
+const wagmiConfig = createConfig({
+  chains,
+  connectors,
+  transports,
+})
+
+// 创建QueryClient
+const queryClient = new QueryClient()
 
 // RainbowKit主题配置
 const rainbowKitTheme = {
@@ -92,17 +118,18 @@ const rainbowKitTheme = {
 
 export const WagmiProvider: React.FC<WagmiProviderProps> = ({ children }) => {
   return (
-    <WagmiProviderBase config={wagmiConfig}>
+    <WagmiProviderCore config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider 
+        <RainbowKitProvider
           theme={rainbowKitTheme}
           modalSize="compact"
+          showRecentTransactions={true}
           coolMode
         >
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>
-    </WagmiProviderBase>
+    </WagmiProviderCore>
   )
 }
 

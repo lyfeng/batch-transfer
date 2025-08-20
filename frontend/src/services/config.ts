@@ -1,7 +1,7 @@
 // API配置
 export const API_CONFIG = {
-  // 后端API基础URL (使用代理，无需指定完整URL)
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || '',
+  // 后端API基础URL (使用代理，相对路径)
+  BASE_URL: '',
   
   // API版本前缀
   API_PREFIX: '/api/v1',

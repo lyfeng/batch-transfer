@@ -157,6 +157,56 @@ public class BatchTransferController {
     }
 
     /**
+     * 根据执行令牌获取任务
+     * 
+     * @param executionToken 执行令牌
+     * @return 任务详情
+     */
+    @GetMapping("/tasks/by-token/{executionToken}")
+    @Operation(summary = "根据执行令牌获取任务", description = "根据执行令牌获取批量转账任务的详细信息")
+    public ResponseEntity<ApiResponse<TaskResponse>> getTaskByExecutionToken(
+            @Parameter(description = "执行令牌") @PathVariable String executionToken) {
+        
+        log.info("Getting task by execution token: {}", executionToken);
+        
+        try {
+            TaskResponse task = batchTransferService.getTaskByExecutionToken(executionToken);
+            return ResponseEntity.ok(ApiResponse.success(task));
+        } catch (Exception e) {
+            log.error("Failed to get task by execution token: {}", executionToken, e);
+            return ResponseEntity.badRequest().body(
+                ApiResponse.businessError("获取任务失败: " + e.getMessage())
+            );
+        }
+    }
+    
+    /**
+     * 回滚任务状态
+     * 
+     * @param taskId 任务ID
+     * @param errorMessage 错误信息
+     * @return 回滚后的任务信息
+     */
+    @PostMapping("/tasks/{taskId}/rollback")
+    @Operation(summary = "回滚任务状态", description = "将执行中的任务回滚为失败状态")
+    public ResponseEntity<ApiResponse<TaskResponse>> rollbackTaskStatus(
+            @Parameter(description = "任务ID") @PathVariable Long taskId,
+            @Parameter(description = "错误信息") @RequestParam(required = false) String errorMessage) {
+        
+        log.info("Rolling back task status: {}", taskId);
+        
+        try {
+            TaskResponse task = batchTransferService.rollbackTaskStatus(taskId, errorMessage);
+            return ResponseEntity.ok(ApiResponse.success(task));
+        } catch (Exception e) {
+            log.error("Failed to rollback task status: {}", taskId, e);
+            return ResponseEntity.badRequest().body(
+                ApiResponse.businessError("回滚任务状态失败: " + e.getMessage())
+            );
+        }
+    }
+    
+    /**
      * 删除任务
      * 
      * @param taskId 任务ID

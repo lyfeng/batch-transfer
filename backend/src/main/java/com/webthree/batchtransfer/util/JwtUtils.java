@@ -62,10 +62,10 @@ public class JwtUtils {
         Date expiryDate = new Date(now.getTime() + expiration);
         
         return Jwts.builder()
-                .setSubject(walletAddress.toLowerCase()) // 统一转为小写
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .subject(walletAddress.toLowerCase()) // 统一转为小写
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
                 .compact();
     }
     
@@ -96,7 +96,7 @@ public class JwtUtils {
             log.error("不支持的JWT Token: {}", e.getMessage());
         } catch (MalformedJwtException e) {
             log.error("JWT Token格式错误: {}", e.getMessage());
-        } catch (SignatureException e) {
+        } catch (JwtException e) {
             log.error("JWT Token签名无效: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
             log.error("JWT Token参数为空: {}", e.getMessage());
@@ -140,11 +140,11 @@ public class JwtUtils {
      * @return Claims
      */
     private Claims getClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
     
     /**

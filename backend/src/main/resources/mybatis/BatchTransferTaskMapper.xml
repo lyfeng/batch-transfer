@@ -13,6 +13,8 @@
                 typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
         <result column="tx_hash" property="txHash" jdbcType="VARCHAR"/>
         <result column="error_message" property="errorMessage" jdbcType="LONGVARCHAR"/>
+        <result column="execution_token" property="executionToken" jdbcType="VARCHAR"/>
+        <result column="execution_started_at" property="executionStartedAt" jdbcType="TIMESTAMP"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -20,7 +22,7 @@
     <!-- 基础字段 -->
     <sql id="Base_Column_List">
         id, task_name, creator_address, recipient_count, total_amount, status, 
-        tx_hash, error_message, created_at, updated_at
+        tx_hash, error_message, execution_token, execution_started_at, created_at, updated_at
     </sql>
 
     <!-- 插入新任务 -->
@@ -28,10 +30,10 @@
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO batch_transfer_task (
             task_name, creator_address, recipient_count, total_amount, status, 
-            tx_hash, error_message, created_at, updated_at
+            tx_hash, error_message, execution_token, execution_started_at, created_at, updated_at
         ) VALUES (
             #{taskName}, #{creatorAddress}, #{totalRecipients}, #{totalAmount}, #{status}, 
-            #{txHash}, #{errorMessage}, NOW(), NOW()
+            #{txHash}, #{errorMessage}, #{executionToken}, #{executionStartedAt}, NOW(), NOW()
         )
     </insert>
 
@@ -91,8 +93,42 @@
             <if test="errorMessage != null and errorMessage != ''">
                 , error_message = #{errorMessage}
             </if>
+            <if test="executionToken != null and executionToken != ''">
+                , execution_token = #{executionToken}
+            </if>
+            <if test="executionStartedAt != null">
+                , execution_started_at = #{executionStartedAt}
+            </if>
         WHERE id = #{id}
     </update>
+
+    <!-- 仅更新交易哈希 -->
+    <update id="updateTxHashOnly">
+        UPDATE batch_transfer_task
+        SET 
+            tx_hash = #{txHash},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据执行令牌查询任务 -->
+    <select id="selectByExecutionToken" parameterType="java.lang.String" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_task
+        WHERE execution_token = #{executionToken}
+    </select>
+
+    <!-- 查询超时的执行中任务 -->
+    <select id="selectTimeoutExecutingTasks" parameterType="java.lang.Integer" resultMap="BatchTransferTaskResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM batch_transfer_task
+        WHERE status = 'EXECUTING'
+        AND execution_started_at IS NOT NULL
+        AND execution_started_at &lt; DATE_SUB(NOW(), INTERVAL #{timeoutMinutes} MINUTE)
+        ORDER BY execution_started_at ASC
+    </select>
 
     <!-- 根据ID删除任务 -->
     <delete id="deleteById" parameterType="java.lang.Long">

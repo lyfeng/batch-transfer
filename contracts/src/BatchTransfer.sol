@@ -40,6 +40,12 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
     uint256 public constant MAX_RECIPIENTS = 200; // 最大接收者数量
     uint256 public totalTransactions;
     mapping(address => uint256) public userTransactionCount;
+    
+    // 执行令牌映射，防止重复执行
+    mapping(string => bool) public executionTokens;
+    
+    // 执行令牌相关事件
+    event ExecutionTokenUsed(string indexed executionToken, address indexed caller);
 
     constructor() Ownable(msg.sender) {}
 
@@ -47,10 +53,12 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
      * @dev 批量转账ETH给多个地址
      * @param _recipients 接收地址数组
      * @param _amounts 对应每个接收地址的ETH金额数组 (单位: Wei)
+     * @param _executionToken 执行令牌，防止重复执行
      */
     function batchTransfer(
         address[] calldata _recipients,
-        uint256[] calldata _amounts
+        uint256[] calldata _amounts,
+        string calldata _executionToken
     ) external payable nonReentrant {
         // 基础验证
         require(_recipients.length > 0, "Recipients array cannot be empty");
@@ -59,6 +67,14 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
             _recipients.length == _amounts.length,
             "Recipients and amounts arrays must have same length"
         );
+        
+        // 执行令牌验证
+        require(bytes(_executionToken).length > 0, "Execution token cannot be empty");
+        require(!executionTokens[_executionToken], "Execution token already used");
+        
+        // 标记执行令牌为已使用
+        executionTokens[_executionToken] = true;
+        emit ExecutionTokenUsed(_executionToken, msg.sender);
 
         // 计算总金额并验证
         uint256 totalAmount = _getTotalAmount(_amounts);
@@ -75,6 +91,7 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
 
         uint256 successCount = 0;
         uint256 failureCount = 0;
+        uint256 failedAmount = 0; // 记录失败转账的总金额
 
         // 执行批量转账
         for (uint256 i = 0; i < _recipients.length; i++) {
@@ -90,6 +107,7 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
                     "Invalid recipient address"
                 );
                 failureCount++;
+                failedAmount += amount; // 累加失败金额
                 continue;
             }
 
@@ -101,6 +119,7 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
                     "Amount cannot be zero"
                 );
                 failureCount++;
+                failedAmount += amount; // 累加失败金额
                 continue;
             }
 
@@ -118,6 +137,7 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
                     "Transfer failed"
                 );
                 failureCount++;
+                failedAmount += amount; // 累加失败金额
             }
         }
 
@@ -133,19 +153,10 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
             failureCount
         );
 
-        // 如果有失败的转账，退还剩余资金
-        if (failureCount > 0) {
-            uint256 refundAmount = 0;
-            for (uint256 i = 0; i < _recipients.length; i++) {
-                if (_recipients[i] == address(0) || _amounts[i] == 0) {
-                    refundAmount += _amounts[i];
-                }
-            }
-            
-            if (refundAmount > 0) {
-                (bool refundSuccess, ) = payable(msg.sender).call{value: refundAmount}("");
-                require(refundSuccess, "Refund failed");
-            }
+        // 如果有失败的转账，退还失败的资金
+        if (failedAmount > 0) {
+            (bool refundSuccess, ) = payable(msg.sender).call{value: failedAmount}("");
+            require(refundSuccess, "Refund failed");
         }
     }
 
@@ -193,6 +204,15 @@ contract BatchTransfer is ReentrancyGuard, Ownable {
      */
     function getUserStats(address _user) external view returns (uint256) {
         return userTransactionCount[_user];
+    }
+    
+    /**
+     * @dev 检查执行令牌是否已被使用
+     * @param _executionToken 执行令牌
+     * @return 是否已被使用
+     */
+    function isExecutionTokenUsed(string calldata _executionToken) external view returns (bool) {
+        return executionTokens[_executionToken];
     }
 
     /**

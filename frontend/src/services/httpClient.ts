@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { toast } from 'react-hot-toast'
-import { API_CONFIG, buildApiUrl } from './config'
+import { API_CONFIG } from './config'
 import { TokenManager, AuthService } from './authService'
 
 // 创建axios实例
@@ -25,7 +25,7 @@ httpClient.interceptors.request.use(
     
     // 自动添加JWT Token
     const token = TokenManager.getAccessToken()
-    if (token && !isAuthPath(config.url || '')) {
+    if (token && !isUnauthenticatedAuthPath(config.url || '')) {
       config.headers.Authorization = `Bearer ${token}`
     }
     
@@ -39,10 +39,16 @@ httpClient.interceptors.request.use(
 )
 
 /**
- * 判断是否为认证相关路径
+ * 判断是否为不需要认证的认证相关路径
  */
-function isAuthPath(url: string): boolean {
-  return url.includes('/auth/')
+function isUnauthenticatedAuthPath(url: string): boolean {
+  const unauthenticatedPaths = [
+    '/auth/challenge',
+    '/auth/login', 
+    '/auth/refresh',
+    '/auth/logout'
+  ]
+  return unauthenticatedPaths.some(path => url.includes(path))
 }
 
 /**
@@ -98,7 +104,7 @@ httpClient.interceptors.response.use(
     let errorMessage = '请求失败'
     
     // 处理401未授权错误（Token过期或无效）
-    if (status === 401 && !isAuthPath(config.url || '')) {
+    if (status === 401 && !isUnauthenticatedAuthPath(config.url || '')) {
       console.log('🔄 Token无效，尝试刷新...')
       
       try {

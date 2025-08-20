@@ -34,6 +34,11 @@ contract BatchTransferTest is Test {
         uint256 failureCount
     );
 
+    event ExecutionTokenUsed(
+        string indexed executionToken,
+        address indexed caller
+    );
+
     function setUp() public {
         owner = address(this);
         user1 = makeAddr("user1");
@@ -75,7 +80,7 @@ contract BatchTransferTest is Test {
         vm.expectEmit(true, false, false, true);
         emit BatchTransferCompleted(user1, totalAmount, 2, 0);
         
-        batchTransfer.batchTransfer{value: totalAmount}(recipients, amounts);
+        batchTransfer.batchTransfer{value: totalAmount}(recipients, amounts, "test-token-success");
         
         vm.stopPrank();
         
@@ -98,7 +103,7 @@ contract BatchTransferTest is Test {
         vm.startPrank(user1);
         
         vm.expectRevert("Sent value does not match total amount");
-        batchTransfer.batchTransfer{value: 2 ether}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 2 ether}(recipients, amounts, "test-token-1");
         
         vm.stopPrank();
     }
@@ -110,7 +115,7 @@ contract BatchTransferTest is Test {
         vm.startPrank(user1);
         
         vm.expectRevert("Recipients array cannot be empty");
-        batchTransfer.batchTransfer{value: 0}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 0}(recipients, amounts, "test-token-2");
         
         vm.stopPrank();
     }
@@ -126,7 +131,7 @@ contract BatchTransferTest is Test {
         vm.startPrank(user1);
         
         vm.expectRevert("Recipients and amounts arrays must have same length");
-        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, "test-token-3");
         
         vm.stopPrank();
     }
@@ -143,7 +148,7 @@ contract BatchTransferTest is Test {
         vm.startPrank(user1);
         
         vm.expectRevert("Too many recipients");
-        batchTransfer.batchTransfer{value: 2.01 ether}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 2.01 ether}(recipients, amounts, "test-token-4");
         
         vm.stopPrank();
     }
@@ -168,7 +173,7 @@ contract BatchTransferTest is Test {
         vm.expectEmit(true, false, false, true);
         emit BatchTransferCompleted(user1, 1 ether, 1, 1);
         
-        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, "test-token-partial");
         
         vm.stopPrank();
         
@@ -193,7 +198,7 @@ contract BatchTransferTest is Test {
         vm.expectEmit(true, false, false, true);
         emit SingleTransferResult(recipient2, 2 ether, true, "Success");
         
-        batchTransfer.batchTransfer{value: 3 ether}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 3 ether}(recipients, amounts, "test-token-5");
         
         vm.stopPrank();
         
@@ -267,9 +272,155 @@ contract BatchTransferTest is Test {
         assertEq(batchTransfer.getUserStats(user1), 0);
         
         vm.startPrank(user1);
-        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts);
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, "test-token-stats");
         vm.stopPrank();
         
         assertEq(batchTransfer.getUserStats(user1), 1);
+    }
+
+    // ========== ExecutionToken Tests ==========
+
+    function testExecutionTokenPreventsReplay() public {
+        address[] memory recipients = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        
+        recipients[0] = recipient1;
+        amounts[0] = 1 ether;
+        
+        string memory executionToken = "unique-token-123";
+        
+        // 检查执行令牌初始状态
+        assertFalse(batchTransfer.isExecutionTokenUsed(executionToken));
+        assertFalse(batchTransfer.executionTokens(executionToken));
+        
+        vm.startPrank(user1);
+        
+        // 第一次执行应该成功
+        vm.expectEmit(true, true, false, true);
+        emit ExecutionTokenUsed(executionToken, user1);
+        
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, executionToken);
+        
+        // 验证执行令牌已被标记为已使用
+        assertTrue(batchTransfer.isExecutionTokenUsed(executionToken));
+        assertTrue(batchTransfer.executionTokens(executionToken));
+        
+        // 第二次使用相同的执行令牌应该失败
+        vm.expectRevert("Execution token already used");
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, executionToken);
+        
+        vm.stopPrank();
+        
+        // 验证第一次转账成功，余额正确
+        assertEq(recipient1.balance, 1 ether);
+    }
+
+    function testDifferentExecutionTokensWork() public {
+        address[] memory recipients = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        
+        recipients[0] = recipient1;
+        amounts[0] = 1 ether;
+        
+        string memory token1 = "token-1";
+        string memory token2 = "token-2";
+        
+        vm.startPrank(user1);
+        
+        // 使用第一个执行令牌
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, token1);
+        assertTrue(batchTransfer.isExecutionTokenUsed(token1));
+        
+        // 使用第二个执行令牌应该成功
+        recipients[0] = recipient2;
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, token2);
+        assertTrue(batchTransfer.isExecutionTokenUsed(token2));
+        
+        vm.stopPrank();
+        
+        // 验证两次转账都成功
+        assertEq(recipient1.balance, 1 ether);
+        assertEq(recipient2.balance, 1 ether);
+    }
+
+    function testEmptyExecutionTokenFails() public {
+        address[] memory recipients = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        
+        recipients[0] = recipient1;
+        amounts[0] = 1 ether;
+        
+        vm.startPrank(user1);
+        
+        vm.expectRevert("Execution token cannot be empty");
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, "");
+        
+        vm.stopPrank();
+    }
+
+    function testExecutionTokenQueryFunctions() public {
+        string memory token = "query-test-token";
+        
+        // 初始状态：未使用
+        assertFalse(batchTransfer.isExecutionTokenUsed(token));
+        assertFalse(batchTransfer.executionTokens(token));
+        
+        // 执行转账
+        address[] memory recipients = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        recipients[0] = recipient1;
+        amounts[0] = 1 ether;
+        
+        vm.startPrank(user1);
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, token);
+        vm.stopPrank();
+        
+        // 执行后状态：已使用
+        assertTrue(batchTransfer.isExecutionTokenUsed(token));
+        assertTrue(batchTransfer.executionTokens(token));
+    }
+
+    function testExecutionTokenWithMultipleUsers() public {
+        address[] memory recipients = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        recipients[0] = recipient1;
+        amounts[0] = 1 ether;
+        
+        string memory token = "multi-user-token";
+        
+        // user1 使用执行令牌
+        vm.startPrank(user1);
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, token);
+        vm.stopPrank();
+        
+        assertTrue(batchTransfer.isExecutionTokenUsed(token));
+        
+        // user2 尝试使用相同的执行令牌应该失败
+        vm.startPrank(user2);
+        vm.expectRevert("Execution token already used");
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, token);
+        vm.stopPrank();
+        
+        // 验证只有第一次转账成功
+        assertEq(recipient1.balance, 1 ether);
+    }
+
+    function testExecutionTokenEventEmission() public {
+        address[] memory recipients = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        recipients[0] = recipient1;
+        amounts[0] = 1 ether;
+        
+        string memory token = "event-test-token";
+        
+        vm.startPrank(user1);
+        
+        // 验证ExecutionTokenUsed事件被正确触发
+        vm.expectEmit(true, true, false, true);
+        emit ExecutionTokenUsed(token, user1);
+        
+        batchTransfer.batchTransfer{value: 1 ether}(recipients, amounts, token);
+        
+        vm.stopPrank();
     }
 }

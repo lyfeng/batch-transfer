@@ -10,42 +10,57 @@
         <result column="amount" property="amount" jdbcType="DECIMAL"/>
         <result column="status" property="status" jdbcType="VARCHAR" 
                 typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result column="tx_hash" property="txHash" jdbcType="VARCHAR"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
     </resultMap>
 
     <!-- 基础字段 -->
     <sql id="Base_Column_List">
-        id, task_id, recipient_address, amount, status, created_at
+        id, task_id, recipient_address, amount, status, tx_hash, created_at
     </sql>
 
     <!-- 批量插入转账项 -->
     <insert id="batchInsert" parameterType="java.util.List">
-        INSERT INTO batch_transfer_items (
-            task_id, recipient_address, amount, status, created_at
+        INSERT INTO batch_transfer_item (
+            task_id, recipient_address, amount, status, tx_hash, created_at
         ) VALUES
         <foreach collection="items" item="item" separator=",">
-            (#{item.taskId}, #{item.recipientAddress}, #{item.amount}, #{item.status}, NOW())
+            (#{item.taskId}, #{item.recipientAddress}, #{item.amount}, #{item.status}, #{item.txHash}, NOW())
         </foreach>
     </insert>
+
+    <!-- 批量更新转账项状态和交易哈希 -->
+    <update id="batchUpdateStatusAndTxHash">
+        UPDATE batch_transfer_item
+        SET status = #{status}, tx_hash = #{txHash}
+        WHERE task_id = #{taskId}
+    </update>
+
+    <!-- 根据任务ID和接收地址更新状态 -->
+    <update id="updateStatusByTaskAndRecipient">
+        UPDATE batch_transfer_item
+        SET status = #{status}
+        WHERE task_id = #{taskId} AND recipient_address = #{recipientAddress}
+    </update>
 
     <!-- 根据任务ID查询转账项列表 -->
     <select id="selectByTaskId" parameterType="java.lang.Long" resultMap="BatchTransferItemResultMap">
         SELECT 
         <include refid="Base_Column_List"/>
-        FROM batch_transfer_items
+        FROM batch_transfer_item
         WHERE task_id = #{taskId}
         ORDER BY id ASC
     </select>
 
     <!-- 根据任务ID删除转账项 -->
     <delete id="deleteByTaskId" parameterType="java.lang.Long">
-        DELETE FROM batch_transfer_items
+        DELETE FROM batch_transfer_item
         WHERE task_id = #{taskId}
     </delete>
 
     <!-- 更新转账项状态 -->
     <update id="updateStatus">
-        UPDATE batch_transfer_items
+        UPDATE batch_transfer_item
         SET status = #{status}
         WHERE id = #{id}
     </update>

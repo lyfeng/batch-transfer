@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+// @ts-ignore
 import eslint from 'vite-plugin-eslint'
 import WindiCSS from 'vite-plugin-windicss'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -59,6 +60,17 @@ export default defineConfig(({ command, mode }) => {
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('proxy error', err);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('Sending Request to the Target:', req.method, req.url);
+            });
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
+              console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+            });
+          },
         },
         // WebSocket代理（如果需要）
         '/ws': {
@@ -120,13 +132,14 @@ export default defineConfig(({ command, mode }) => {
           },
           entryFileNames: 'js/[name]-[hash].js',
           assetFileNames: (assetInfo) => {
-            const info = assetInfo.name.split('.')
+            const fileName = assetInfo.name || 'asset'
+            const info = fileName.split('.')
             let extType = info[info.length - 1]
-            if (/\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/i.test(assetInfo.name)) {
+            if (/\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/i.test(fileName)) {
               extType = 'media'
-            } else if (/\.(png|jpe?g|gif|svg|ico|webp)(\?.*)?$/i.test(assetInfo.name)) {
+            } else if (/\.(png|jpe?g|gif|svg|ico|webp)(\?.*)?$/i.test(fileName)) {
               extType = 'images'
-            } else if (/\.(woff2?|eot|ttf|otf)(\?.*)?$/i.test(assetInfo.name)) {
+            } else if (/\.(woff2?|eot|ttf|otf)(\?.*)?$/i.test(fileName)) {
               extType = 'fonts'
             }
             return `${extType}/[name]-[hash].[ext]`

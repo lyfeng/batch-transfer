@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Table, Button, Tag, Space, Card, message, Spin } from 'antd'
-import { PlusOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Table, Button, Tag, Space, Card, message, Spin, Alert } from 'antd'
+import { PlusOutlined, EyeOutlined, ReloadOutlined, RedoOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAccount } from 'wagmi'
 import type { ColumnsType } from 'antd/es/table'
 import BatchTransferApi from '../services/batchTransferApi'
 import type { TaskStatus } from '../services/types'
-import WalletAuth from '../components/WalletAuth'
 import dayjs from 'dayjs'
+import { useAuth } from '../hooks/useAuth'
 
 interface TaskRecord {
   key: string
@@ -22,6 +22,7 @@ interface TaskRecord {
 const TaskList: React.FC = () => {
   const navigate = useNavigate()
   const { address, isConnected } = useAccount()
+  const { isAuthenticated, login } = useAuth()
   const [tasks, setTasks] = useState<TaskRecord[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -101,7 +102,7 @@ const TaskList: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 160,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
@@ -113,6 +114,17 @@ const TaskList: React.FC = () => {
           >
             查看
           </Button>
+          {record.status === 'FAILED' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<RedoOutlined />}
+              onClick={() => navigate(`/tasks/${record.id}`)}
+              style={{ color: '#ff4d4f' }}
+            >
+              重试
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -122,6 +134,11 @@ const TaskList: React.FC = () => {
   const loadTasks = async () => {
     if (!isConnected || !address) {
       console.warn('钱包未连接，无法加载任务列表')
+      return
+    }
+
+    if (!isAuthenticated) {
+      console.warn('用户未认证，无法加载任务列表')
       return
     }
 
@@ -147,47 +164,66 @@ const TaskList: React.FC = () => {
     }
   }
 
-  // 页面加载时获取数据，依赖钱包连接状态
+  // 页面加载时获取数据，依赖钱包连接状态和认证状态
   useEffect(() => {
-    if (isConnected && address) {
+    if (isConnected && address && isAuthenticated) {
       loadTasks()
     }
-  }, [isConnected, address])
+  }, [isConnected, address, isAuthenticated])
 
   return (
-    <WalletAuth requireAuth={true}>
-      <div style={{ padding: '20px 0' }}>
-        {/* 简单标题和按钮 */}
-        <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <h1 style={{ fontSize: '24px', margin: '0', fontWeight: 'bold' }}>
-              我的转账任务
-            </h1>
-            {address && (
-              <div style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
-                钱包地址: {address.slice(0, 6)}...{address.slice(-4)}
-              </div>
-            )}
-          </div>
-          <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={loadTasks}
-              loading={loading}
-            >
-              刷新
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate('/tasks/create')}
-            >
-              创建新任务
-            </Button>
-          </Space>
+    <div style={{ padding: '20px 0' }}>
+      {/* 简单标题和按钮 */}
+      <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', margin: '0', fontWeight: 'bold' }}>
+            我的转账任务
+          </h1>
+          {address && (
+            <div style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
+              钱包地址: {address.slice(0, 6)}...{address.slice(-4)}
+              {isAuthenticated && (
+                <span style={{ color: '#52c41a', marginLeft: '8px' }}>✓ 已认证</span>
+              )}
+            </div>
+          )}
         </div>
+        <Space>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={loadTasks}
+            loading={loading}
+          >
+            刷新
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/tasks/create')}
+          >
+            创建新任务
+          </Button>
+        </Space>
+      </div>
         
-        {/* 简单表格 */}
+      {/* 认证提示 */}
+      {isConnected && !isAuthenticated && (
+        <Alert
+          message="需要钱包签名认证"
+          description="请先进行钱包签名认证后再查看任务列表"
+          type="warning"
+          showIcon
+          style={{ marginBottom: '20px' }}
+          action={
+            <Button size="small" onClick={login}>
+              立即认证
+            </Button>
+          }
+        />
+      )}
+
+      {/* 简单表格 */}
+      <div>
         <Card>
           <Spin spinning={loading} tip="加载中...">
             <Table
@@ -216,7 +252,7 @@ const TaskList: React.FC = () => {
           </Spin>
         </Card>
       </div>
-    </WalletAuth>
+    </div>
   )
 }
 

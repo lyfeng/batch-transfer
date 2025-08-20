@@ -1,7 +1,9 @@
 package com.webthree.batchtransfer.service;
 
 import com.webthree.batchtransfer.entity.BatchTransferTask;
+import com.webthree.batchtransfer.entity.BatchTransferItem;
 import com.webthree.batchtransfer.mapper.BatchTransferTaskMapper;
+import com.webthree.batchtransfer.mapper.BatchTransferItemMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -29,6 +31,7 @@ public class BlockchainMonitorService {
     
     private final Web3j web3j;
     private final BatchTransferTaskMapper taskMapper;
+    private final BatchTransferItemMapper itemMapper;
     
     /**
      * 定时检查执行中的任务状态
@@ -100,9 +103,6 @@ public class BlockchainMonitorService {
     
     /**
      * 根据交易收据更新任务状态
-     * 
-     * @param task 任务对象
-     * @param receipt 交易收据
      */
     @Transactional(rollbackFor = Exception.class)
     private void updateTaskStatusBasedOnReceipt(BatchTransferTask task, TransactionReceipt receipt) {
@@ -115,15 +115,24 @@ public class BlockchainMonitorService {
             log.info("任务 {} 执行成功，txHash: {}, gasUsed: {}", 
                     taskId, txHash, receipt.getGasUsed());
             
+            // 更新任务状态
             int updated = taskMapper.updateStatus(
                     taskId, 
                     BatchTransferTask.TaskStatus.COMPLETED, 
                     txHash, 
-                    null
+                    null, // executionToken
+                    null, // errorMessage
+                    null  // executionStartedAt
             );
             
             if (updated > 0) {
-                log.info("成功更新任务 {} 状态为已完成", taskId);
+                // 同时更新所有转账项状态为成功
+                itemMapper.batchUpdateStatusAndTxHash(
+                    taskId, 
+                    BatchTransferItem.ItemStatus.SUCCESS, 
+                    txHash
+                );
+                log.info("成功更新任务 {} 及其所有转账项状态为已完成", taskId);
             } else {
                 log.error("更新任务 {} 状态失败", taskId);
             }
@@ -135,6 +144,13 @@ public class BlockchainMonitorService {
                     taskId, txHash, errorMessage);
             
             updateTaskStatusToFailed(taskId, errorMessage);
+            
+            // 同时更新所有转账项状态为失败
+            itemMapper.batchUpdateStatusAndTxHash(
+                taskId, 
+                BatchTransferItem.ItemStatus.FAILED, 
+                txHash
+            );
         }
     }
     
@@ -149,8 +165,10 @@ public class BlockchainMonitorService {
         int updated = taskMapper.updateStatus(
                 taskId, 
                 BatchTransferTask.TaskStatus.FAILED, 
-                null, 
-                errorMessage
+                null, // txHash
+                null, // executionToken
+                errorMessage, 
+                null  // executionStartedAt
         );
         
         if (updated > 0) {

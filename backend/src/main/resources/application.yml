@@ -47,13 +47,13 @@ app:
   # 区块链配置
   blockchain:
     # 以太坊RPC节点URL（请替换为实际的RPC地址）
-    rpc-url: https://mainnet.infura.io/v3/YOUR_PROJECT_ID
+    rpc-url: https://virtual.mainnet.us-west.rpc.tenderly.co/697808de-4372-4815-b964-84394e11796e
     # 连接超时时间（毫秒）
     connection-timeout: 30000
     # 读取超时时间（毫秒）
     read-timeout: 60000
     # 智能合约地址（需要部署后配置）
-    contract-address: 0x0000000000000000000000000000000000000000
+    contract-address: 0x3143c06a240f3AFe62Fd2ab4Ce3d342Bc40106d3
   
   # CORS配置
   cors:
@@ -127,11 +127,11 @@ spring:
       on-profile: dev
   
   datasource:
-    url: jdbc:mysql://localhost:3306/batch_transfer?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/batch_transfer?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
 
 app:
   blockchain:
-    rpc-url: https://sepolia.infura.io/v3/LHmZkZ7_8RbdrJiJSlADd
+    rpc-url: https://virtual.mainnet.us-west.rpc.tenderly.co/697808de-4372-4815-b964-84394e11796e
 
 logging:
   level:
